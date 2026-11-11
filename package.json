@@ -1,0 +1,8 @@
+{
+  "name": "quiz-solver-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PWA per iPad: legge un Google Moduli (quiz), lo risolve con Claude e genera il link precompilato.",
+  "scripts": { "start": "node server.js", "test": "node test.js" },
+  "engines": { "node": ">=18" }
+}

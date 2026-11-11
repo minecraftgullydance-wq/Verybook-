@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Quiz Solver"><link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.webmanifest"><title>Quiz Solver</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--tx:#f1f5f9;--mut:#94a3b8;--ac:#6366f1;--ok:#22c55e}
+@media(prefers-color-scheme:light){:root{--bg:#f1f5f9;--card:#fff;--tx:#0f172a;--mut:#64748b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:18px -apple-system,system-ui,sans-serif;padding:env(safe-area-inset-top) 16px 40px}
+main{max-width:760px;margin:0 auto}h1{font-size:28px;margin:24px 0 4px}p.s{color:var(--mut);margin:0 0 20px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin:12px 0}
+input,select{width:100%;font-size:18px;padding:14px;border-radius:12px;border:1px solid #475569;background:transparent;color:var(--tx);margin:6px 0}
+button,a.btn{display:block;width:100%;text-align:center;text-decoration:none;font-size:19px;font-weight:600;padding:16px;border:0;border-radius:14px;background:var(--ac);color:#fff;margin:10px 0;cursor:pointer}
+button:disabled{opacity:.5}a.btn.ok{background:var(--ok);color:#052e16}
+label{font-size:14px;color:var(--mut)}.q b{display:block;margin-bottom:6px}.a{color:var(--ok);font-weight:700}.n{color:var(--mut);font-size:15px;margin-top:4px}
+.err{color:#f87171}details{margin-top:8px}.row{display:flex;gap:8px}.row>*{flex:1}
+</style></head><body><main>
+<h1>📐 Quiz Solver</h1><p class="s">Incolla il link del Google Modulo: ottieni il link già compilato, pronto da inviare.</p>
+<div class="card"><label>Link del modulo</label><input id="url" type="url" inputmode="url" placeholder="https://forms.gle/… oppure docs.google.com/forms/…">
+<button id="go">Risolvi</button><div id="st" class="n"></div></div>
+<div id="out"></div>
+<details class="card"><summary>Impostazioni</summary>
+<label>Chiave API Anthropic (salvata solo su questo iPad)</label><input id="key" type="password" placeholder="sk-ant-…" autocomplete="off">
+<label>Modello</label><select id="model"><option value="claude-opus-5-5">Opus 5.5 (più preciso)</option><option value="claude-sonnet-5-5">Sonnet 5.5 (più veloce)</option></select></details>
+</main><script>
+const $=id=>document.getElementById(id);
+const L=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch{}};
+$('key').value=L('key')||'';$('model').value=L('model')||'claude-opus-5-5';
+$('key').onchange=e=>L('key',e.target.value.trim());$('model').onchange=e=>L('model',e.target.value);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+$('go').onclick=async()=>{
+  const url=$('url').value.trim();if(!url)return;
+  $('go').disabled=true;$('st').className='n';$('st').textContent='Leggo il modulo e risolvo… (può richiedere qualche secondo)';$('out').innerHTML='';
+  try{
+    const r=await fetch('/api/solve',{method:'POST',headers:{'content-type':'application/json','x-api-key':$('key').value.trim()},body:JSON.stringify({url,model:$('model').value})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error);
+    $('st').textContent='';
+    let h=`<div class="card"><b>${esc(d.title)}</b><a class="btn ok" href="${esc(d.link)}" target="_blank" rel="noopener">Apri modulo precompilato ↗</a><button id="cp">Copia link</button></div>`;
+    for(const q of d.questions)h+=`<div class="card q"><b>${q.index+1}. ${esc(q.text)}${q.hasImage?' 🖼️':''}</b><div class="a">${esc([].concat(q.answer??'—').join(', '))}</div>${q.note?`<div class="n">${esc(q.note)}</div>`:''}</div>`;
+    if(d.skipped.length)h+=`<div class="card n">Domande non supportate (da compilare a mano): ${d.skipped.map(esc).join('; ')}</div>`;
+    if(d.questions.some(q=>q.hasImage))h+=`<div class="card n">🖼️ Alcune domande contengono immagini/figure che non vedo: controlla quelle risposte.</div>`;
+    $('out').innerHTML=h;
+    $('cp').onclick=async()=>{try{await navigator.clipboard.writeText(d.link);$('cp').textContent='Copiato ✓'}catch{prompt('Copia il link:',d.link)}};
+  }catch(e){$('st').className='n err';$('st').textContent=e.message}
+  $('go').disabled=false;
+};
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
