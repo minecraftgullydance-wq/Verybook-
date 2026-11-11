@@ -4,7 +4,8 @@ Incolli il link di un Google Modulo (quiz di geometria/matematica non scolastici
 
 ## Avvio
 ```bash
-echo 'ANTHROPIC_API_KEY=sk-ant-...' > .env   # ignorato da git; oppure variabile d'ambiente sull'host
+# Alla prima apertura l'app chiede a ogni utente la PROPRIA chiave API (salvata solo sul suo dispositivo).
+# Opzionale, solo uso personale: ANTHROPIC_API_KEY in .env + ALLOW_SERVER_KEY=1
 npm start                             # http://localhost:3000
 ```
 Deploy su qualsiasi host Node >= 18 (Render, Fly, Railway…; serve HTTPS). Poi su iPad: Safari → Condividi → **Aggiungi a Home**.

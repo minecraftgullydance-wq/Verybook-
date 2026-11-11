@@ -62,8 +62,8 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'POST' && req.url === '/api/solve') {
       const { url, model } = await readBody(req);
-      const apiKey = req.headers['x-api-key'] || process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) return send(res, 400, { error: 'Manca la chiave API Anthropic (Impostazioni).' });
+      const apiKey = req.headers['x-api-key'] || (process.env.ALLOW_SERVER_KEY === '1' ? process.env.ANTHROPIC_API_KEY : '');
+      if (!apiKey) return send(res, 400, { error: 'Inserisci la tua chiave API Anthropic.' });
       const { html, finalUrl } = await fetchForm(url);
       const form = parseForm(html);
       if (!form.questions.length) return send(res, 422, { error: 'Nessuna domanda trovata nel modulo.' });
