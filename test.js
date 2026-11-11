@@ -12,3 +12,7 @@ assert.equal(f.title, 'Quiz geometria'); assert.equal(f.questions.length, 3);
 const link = buildPrefillLink('https://docs.google.com/forms/d/e/ABC/viewform?x=1', f.questions, { 0: '25', 1: 'No', 2: ['Quadrato', 'Triangolo equilatero'] });
 assert.equal(link, 'https://docs.google.com/forms/d/e/ABC/viewform?usp=pp_url&entry.111=25&entry.222=No&entry.333=Quadrato&entry.333=Triangolo+equilatero');
 console.log('OK');
+const d2 = [null,[null,[[1,'Fig',null,11,null,null,['x',['https://lh3.googleusercontent.com/abc']]],[2,'Angolo?',null,0,[[9,null,1]]]]],null,'T'];
+const f2 = parseForm(`FB_PUBLIC_LOAD_DATA_ = ${JSON.stringify(d2)};`);
+assert.deepEqual(f2.questions[0].images, ['https://lh3.googleusercontent.com/abc=w1200']);
+console.log('OK img');
