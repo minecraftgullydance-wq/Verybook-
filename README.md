@@ -4,8 +4,8 @@ Incolli il link di un Google Modulo (quiz di geometria/matematica non scolastici
 
 ## Avvio
 ```bash
-# Alla prima apertura l'app chiede a ogni utente la PROPRIA chiave API (salvata solo sul suo dispositivo).
-# Opzionale, solo uso personale: ANTHROPIC_API_KEY in .env + ALLOW_SERVER_KEY=1
+# Alla prima apertura ogni utente sceglie l IA (Claude, ChatGPT, Gemini o altra compatibile OpenAI) e inserisce la PROPRIA chiave API (salvata solo sul suo dispositivo).
+# Opzionale, solo uso personale: ANTHROPIC_API_KEY in .env + ALLOW_SERVER_KEY=1 (solo provider Claude)
 npm start                             # http://localhost:3000
 ```
 Deploy su qualsiasi host Node >= 18 (Render, Fly, Railway…; serve HTTPS). Poi su iPad: Safari → Condividi → **Aggiungi a Home**.

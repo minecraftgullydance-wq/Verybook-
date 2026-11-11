@@ -21,26 +21,32 @@ label{font-size:14px;color:var(--mut)}.q b{display:block;margin-bottom:6px}.a{co
 <button id="go">Risolvi</button><div id="st" class="n"></div></div>
 <div id="out"></div>
 <details class="card"><summary>Impostazioni</summary>
-<label>Chiave API Anthropic (salvata solo su questo iPad)</label><input id="key" type="password" placeholder="sk-ant-…" autocomplete="off">
-<label>Modello</label><select id="model"><option value="claude-opus-5-5">Opus 5.5 (più preciso)</option><option value="claude-sonnet-5-5">Sonnet 5.5 (più veloce)</option></select></details>
+<label>Intelligenza artificiale</label><select id="prov"><option value="anthropic">Claude (Anthropic)</option><option value="openai">ChatGPT (OpenAI)</option><option value="gemini">Gemini (Google)</option><option value="custom">Altra (compatibile OpenAI: OpenRouter, Groq, DeepSeek…)</option></select>
+<div id="baseW" style="display:none"><label>Indirizzo API (https://…/v1)</label><input id="base" placeholder="https://openrouter.ai/api/v1"></div>
+<label>Modello (deve supportare le immagini per le figure)</label><input id="model" placeholder="nome modello">
+<label>Chiave API (salvata solo su questo dispositivo)</label><input id="key" type="password" placeholder="Chiave API" autocomplete="off">
+</details>
 </main>
 <div id="gate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9;padding:env(safe-area-inset-top) 16px"><main>
-<h1>🔑 Benvenuto</h1><p class="s">Per usare l'app inserisci la tua chiave API Anthropic. Resta salvata solo su questo dispositivo e viene usata solo per risolvere i tuoi quiz. Puoi crearla su console.anthropic.com.</p>
-<div class="card"><input id="gkey" type="password" placeholder="sk-ant-…" autocomplete="off"><button id="gsave">Salva e continua</button><div id="gerr" class="n err"></div></div></main></div>
+<h1>🔑 Benvenuto</h1><p class="s">Scegli l'intelligenza artificiale che vuoi usare e inserisci la tua chiave API. Resta salvata solo su questo dispositivo.</p>
+<div class="card"><select id="gprov"><option value="anthropic">Claude (Anthropic)</option><option value="openai">ChatGPT (OpenAI)</option><option value="gemini">Gemini (Google)</option><option value="custom">Altra (compatibile OpenAI)</option></select><input id="gkey" type="password" placeholder="Chiave API" autocomplete="off"><button id="gsave">Salva e continua</button><div id="gerr" class="n err"></div></div></main></div>
 <script>
 const $=id=>document.getElementById(id);
 const L=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch{}};
-$('key').value=L('key')||'';$('model').value=L('model')||'claude-opus-5-5';
+const DEF={anthropic:'claude-opus-5-5',openai:'gpt-4o',gemini:'gemini-2.5-flash',custom:''};
+$('key').value=L('key')||'';$('prov').value=L('prov')||'anthropic';$('model').value=L('model')||DEF[$('prov').value];$('base').value=L('base')||'';
+function setProv(){L('prov',$('prov').value);$('model').value=DEF[$('prov').value];L('model',$('model').value);$('baseW').style.display=$('prov').value==='custom'?'block':'none'}
+$('baseW').style.display=$('prov').value==='custom'?'block':'none';$('prov').onchange=setProv;$('base').onchange=e=>L('base',e.target.value.trim());
 function gate(){const need=!(L('key')||'').trim();$('gate').style.display=need?'block':'none';}
-$('gsave').onclick=()=>{const v=$('gkey').value.trim();if(!/^sk-ant-/.test(v)){$('gerr').textContent='La chiave deve iniziare con sk-ant-';return}L('key',v);$('key').value=v;gate();};
+$('gsave').onclick=()=>{const v=$('gkey').value.trim();if(v.length<10){$('gerr').textContent='Inserisci una chiave valida';return}$('prov').value=$('gprov').value;setProv();L('key',v);$('key').value=v;gate();};
 gate();
-$('key').onchange=e=>{L('key',e.target.value.trim());gate()};$('model').onchange=e=>L('model',e.target.value);
+$('key').onchange=e=>{L('key',e.target.value.trim());gate()};$('model').onchange=e=>L('model',e.target.value.trim());
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('go').onclick=async()=>{
   const url=$('url').value.trim();if(!url)return;if(!$('key').value.trim()){gate();return}
   $('go').disabled=true;$('st').className='n';$('st').textContent='Leggo il modulo e risolvo… (può richiedere qualche secondo)';$('out').innerHTML='';
   try{
-    const r=await fetch('/api/solve',{method:'POST',headers:{'content-type':'application/json','x-api-key':$('key').value.trim()},body:JSON.stringify({url,model:$('model').value})});
+    const r=await fetch('/api/solve',{method:'POST',headers:{'content-type':'application/json','x-api-key':$('key').value.trim()},body:JSON.stringify({url,provider:$('prov').value,model:$('model').value.trim(),baseUrl:$('base').value.trim()})});
     const d=await r.json();if(!r.ok)throw new Error(d.error);
     $('st').textContent='';
     let h=`<div class="card"><b>${esc(d.title)}</b><a class="btn ok" href="${esc(d.link)}" target="_blank" rel="noopener">Apri modulo precompilato ↗</a><button id="cp">Copia link</button></div>`;
