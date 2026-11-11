@@ -16,10 +16,19 @@ const send = (res, code, obj) => { res.writeHead(code, { 'Content-Type': 'applic
 async function fetchForm(url) {
   const u = new URL(url);
   if (u.protocol !== 'https:' || !ALLOWED_HOSTS.has(u.hostname)) throw new Error('Incolla un link di Google Moduli (docs.google.com/forms o forms.gle).');
+  // link di modifica (/d/ID/edit) o con /u/0/ -> link di compilazione
+  u.pathname = u.pathname.replace(/\/u\/\d+\//, '/').replace(/\/edit.*$/, '/viewform');
   const r = await fetch(u, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'it,en' } });
   const finalHost = new URL(r.url).hostname;
-  if (!ALLOWED_HOSTS.has(finalHost)) throw new Error('Il link porta fuori da Google Moduli (login richiesto?).');
-  return { html: await r.text(), finalUrl: r.url };
+  if (!ALLOWED_HOSTS.has(finalHost)) throw new Error('Il modulo richiede l\'accesso con un account Google: l\'app non può aprirlo. Apri le impostazioni del modulo e togli "Limita a utenti dell\'organizzazione" / "Richiedi accesso", oppure usa un modulo pubblico.');
+  const html = await r.text();
+  if (!/FB_PUBLIC_LOAD_DATA_/.test(html)) {
+    console.log('Modulo non leggibile:', r.status, r.url, html.slice(0, 200).replace(/\s+/g, ' '));
+    if (/ServiceLogin|accounts\.google\.com|Accedi|Sign in/i.test(html)) throw new Error('Il modulo richiede l\'accesso con un account Google (modulo non pubblico).');
+    if (/non accetta più risposte|no longer accepting/i.test(html)) throw new Error('Il modulo è chiuso: non accetta più risposte.');
+    throw new Error(`Google non ha restituito il modulo (stato ${r.status}). Controlla che il link sia di compilazione e che il modulo sia pubblico; se sì, Google potrebbe aver bloccato il server: riprova tra poco.`);
+  }
+  return { html, finalUrl: r.url };
 }
 
 async function loadImage(url) {
