@@ -37,9 +37,9 @@ $('go').onclick=async()=>{
     const d=await r.json();if(!r.ok)throw new Error(d.error);
     $('st').textContent='';
     let h=`<div class="card"><b>${esc(d.title)}</b><a class="btn ok" href="${esc(d.link)}" target="_blank" rel="noopener">Apri modulo precompilato ↗</a><button id="cp">Copia link</button></div>`;
-    for(const q of d.questions)h+=`<div class="card q"><b>${q.index+1}. ${esc(q.text)}${q.hasImage?' 🖼️':''}</b><div class="a">${esc([].concat(q.answer??'—').join(', '))}</div>${q.note?`<div class="n">${esc(q.note)}</div>`:''}</div>`;
+    for(const q of d.questions)h+=`<div class="card q"><b>${q.index+1}. ${esc(q.text)}${q.images?.length?' 🖼️':''}</b><div class="a">${esc([].concat(q.answer??'—').join(', '))}</div>${q.note?`<div class="n">${esc(q.note)}</div>`:''}</div>`;
     if(d.skipped.length)h+=`<div class="card n">Domande non supportate (da compilare a mano): ${d.skipped.map(esc).join('; ')}</div>`;
-    if(d.questions.some(q=>q.hasImage))h+=`<div class="card n">🖼️ Alcune domande contengono immagini/figure che non vedo: controlla quelle risposte.</div>`;
+    if(d.questions.some(q=>q.images?.length))h+=`<div class="card n">🖼️ Alcune domande contengono immagini/figure (lette dall'immagine): ricontrolla comunque quelle più delicate.</div>`;
     $('out').innerHTML=h;
     $('cp').onclick=async()=>{try{await navigator.clipboard.writeText(d.link);$('cp').textContent='Copiato ✓'}catch{prompt('Copia il link:',d.link)}};
   }catch(e){$('st').className='n err';$('st').textContent=e.message}

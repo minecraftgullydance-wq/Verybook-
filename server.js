@@ -2,6 +2,7 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const { parseForm, buildPrefillLink } = require('./parser');
 
+try { for (const l of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n')) { const m = l.match(/^\s*([A-Z_]+)\s*=\s*(.*?)\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; } } catch {}
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(__dirname, 'public');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
@@ -21,16 +22,33 @@ async function fetchForm(url) {
   return { html: await r.text(), finalUrl: r.url };
 }
 
+async function loadImage(url) {
+  const u = new URL(url);
+  if (!/\.googleusercontent\.com$/.test(u.hostname)) return null;
+  const r = await fetch(u);
+  if (!r.ok) return null;
+  const type = (r.headers.get('content-type') || '').split(';')[0];
+  if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(type)) return null;
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (buf.length > 4e6) return null;
+  return { type: 'image', source: { type: 'base64', media_type: type, data: buf.toString('base64') } };
+}
+
 async function solve(form, apiKey, model) {
-  const payload = form.questions.map(q => ({ index: q.index, type: q.type, question: q.text, description: q.description || undefined, options: q.options.length ? q.options : undefined }));
-  const system = 'Sei un esperto di matematica e geometria. Risolvi con cura ogni domanda del quiz (ragiona passo passo internamente). ' +
+  const payload = form.questions.map(q => ({ index: q.index, type: q.type, question: q.text, images: q.images.length ? `${q.images.length} immagine/i allegata/e sotto` : undefined, description: q.description || undefined, options: q.options.length ? q.options : undefined }));
+  const system = 'Sei un esperto di matematica e geometria. Puoi vedere le figure allegate: leggi con attenzione dati, etichette e angoli. Risolvi con cura ogni domanda del quiz (ragiona passo passo internamente). ' +
     'Per le domande a scelta (radio/dropdown/scale) rispondi con ESATTAMENTE il testo di una delle options. Per checkbox rispondi con un array di options. ' +
     'Per risposte aperte dai solo il valore finale conciso (es. "24" o "12.5", senza unità se non richieste). date = YYYY-MM-DD, time = HH:MM. ' +
     'Rispondi SOLO con JSON: {"answers":{"<index>":<risposta>},"notes":{"<index>":"breve spiegazione"}}.';
+  const content = [{ type: 'text', text: `Titolo: ${form.title}\n\n${JSON.stringify(payload, null, 1)}` }];
+  for (const q of form.questions) for (const url of q.images) {
+    const img = await loadImage(url).catch(() => null);
+    if (img) content.push({ type: 'text', text: `Immagine per la domanda ${q.index}:` }, img);
+  }
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model, max_tokens: 8000, system, messages: [{ role: 'user', content: `Titolo: ${form.title}\n\n${JSON.stringify(payload, null, 1)}` }] }),
+    body: JSON.stringify({ model, max_tokens: 8000, system, messages: [{ role: 'user', content }] }),
   });
   const j = await r.json();
   if (!r.ok) throw new Error(j.error?.message || 'Errore API Claude');

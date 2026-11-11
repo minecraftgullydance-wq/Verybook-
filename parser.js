@@ -15,17 +15,24 @@ function extractLoadData(html) {
   throw new Error('Struttura del modulo non riconosciuta.');
 }
 
+function findImages(it) {
+  const m = JSON.stringify(it).match(/https:\/\/lh\d*\.googleusercontent\.com\/[^"\\\s]+/g) || [];
+  return m.map(u => (u.includes('=') ? u : u + '=w1200'));
+}
+
 function parseForm(html) {
   const data = extractLoadData(html);
   const title = data[3] || data[1]?.[8] || 'Modulo';
   const items = data[1]?.[1] || [];
   const questions = [];
   const skipped = [];
+  let pending = [];
   for (const it of items) {
+    const imgs = findImages(it);
     const typeId = it[3];
     const text = it[1] || '';
     const sub = it[4];
-    if (!Array.isArray(sub) || !sub.length) continue; // sezioni, testo, immagini
+    if (!Array.isArray(sub) || !sub.length) { pending.push(...imgs); continue; }
     if (!(typeId in TYPES)) { skipped.push(text || `(tipo ${typeId})`); continue; }
     const q = sub[0];
     questions.push({
@@ -36,8 +43,9 @@ function parseForm(html) {
       type: TYPES[typeId],
       required: !!q[2],
       options: (q[1] || []).map(o => o[0]).filter(o => o !== undefined && o !== ''),
-      hasImage: Array.isArray(it[6]) || (typeof it[6] === 'string'),
+      images: [...new Set([...pending, ...imgs])].slice(0, 5),
     });
+    pending = [];
   }
   return { title, questions, skipped };
 }
